@@ -1,0 +1,17 @@
+{
+  "environment": "web",
+  "format": "html",
+  "prefix": "https://storage.googleapis.com",
+  "mainga": "UA-49880327-14",
+  "updated": "2022-06-09T14:01:18-04:00",
+  "id": "dt-k8s-install-options",
+  "duration": 31,
+  "title": "Dynatrace Kubernetes Installation Options",
+  "summary": "Dynatrace Kubernetes Installation Options",
+  "source": "kubernetes-setup.md",
+  "theme": "",
+  "status": null,
+  "category": null,
+  "tags": [],
+  "url": "dt-k8s-install-options"
+}

@@ -1,0 +1,940 @@
+
+<!doctype html>
+
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, minimum-scale=1.0, initial-scale=1.0, user-scalable=yes">
+  <meta name="theme-color" content="#4F7DC9">
+  <meta charset="UTF-8">
+  <title>Dynatrace Kubernetes Installation Options</title>
+  <link rel="stylesheet" href="//fonts.googleapis.com/css?family=Source+Code+Pro:400|Roboto:400,300,400italic,500,700|Roboto+Mono">
+  <link rel="stylesheet" href="//fonts.googleapis.com/icon?family=Material+Icons">
+  <link rel="stylesheet" href="https://storage.googleapis.com/codelab-elements/codelab-elements.css">
+  <style>
+    .success {
+      color: #1e8e3e;
+    }
+    .error {
+      color: red;
+    }
+  </style>
+</head>
+<body>
+  <google-codelab-analytics gaid="UA-49880327-14"></google-codelab-analytics>
+  <google-codelab codelab-gaid=""
+                  id="dt-k8s-install-options"
+                  title="Dynatrace Kubernetes Installation Options"
+                  environment="web"
+                  feedback-link="">
+    
+      <google-codelab-step label="Overview" duration="5">
+        <h2 is-upgraded>What You&#39;ll Learn Today</h2>
+<p>Today we will cover the installation options avaialble to the <a href="https://github.com/Dynatrace/dynatrace-operator" target="_blank">Dynatrace Kubernetes Operator deployment</a> and how to setup of the four deployment models supported:</p>
+<ul>
+<li>Classic Full Stack</li>
+<li>Host Monitoring<br></li>
+<li>Application Monitoring</li>
+<li>Cloud Native Full Stack</li>
+</ul>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="Technical Specification" duration="5">
+        <h2 is-upgraded>Technologies We Will Work With Today</h2>
+<ul>
+<li><a href="https://www.dynatrace.com/trial/" target="_blank">Dynatrace SasS Tenant</a></li>
+<li><a href="https://kubernetes.io/docs/tasks/tools/install-kubectl-linux/" target="_blank">kubectl cli</a></li>
+<li><a href="https://kubernetes.io/" target="_blank">Kubernetes</a></li>
+<li><a href="https://cloud.google.com" target="_blank">Google Kubernetes Engine</a></li>
+<li><a href="https://github.com/GoogleCloudPlatform/microservices-demo" target="_blank">Google Microservices Demo</a></li>
+<li><a href="https://github.com/Dynatrace/dynatrace-operator" target="_blank">Dynatrace Operator</a></li>
+</ul>
+<h2 is-upgraded>Dynatrace Operator Supported Deployments:</h2>
+<h2 is-upgraded>Classic Full Stack Monitoring.</h2>
+<p>In this model the Dynatrace Operator deploys and maintains a OneAgent DaemonSet across all workers nodes of your Kubernetes cluster. The Dynatrace Operator integrates with the Kubernetes API to provide native k8s events, monitors the cluster node health and provides code level visibility into all pods across all nodes <em>automatically</em>.</p>
+<h2 is-upgraded>Host Monitoring</h2>
+<p>In this model the Dynatrace Operator deploys and maintains a OneAgent DaemonSet across all workers nodes of your Kubernetes cluster. The Dynatrace Operator integrates with the Kubernetes API to provide native k8s events, monitors the cluster node health and provides <em>only</em> infrastrucutre level metrics on pods &amp; workloads. There is no code level visibility in this model.</p>
+<h2 is-upgraded>Application Monitoring</h2>
+<p>In this model the Dynatrace Operator deploys and maintains a <a href="https://kubernetes-csi.github.io/docs/introduction.html" target="_blank">CSI Driver</a> daemonset across all workers nodes of your Kubernetes cluster. The Dynatrace Operator integrates with the Kubernetes API to provide native k8s events, high level cluster node health. This model directly injects the OneAgent into pods infrastrucutre level metrics on pods &amp; workloads. There is <em>ONLY</em> code level visibility in this model. Additionally there is no linkage between the K8s integration and the pods being instrumented. Pods will report under the &#34;Hosts&#34; tab in the Dynatrace UI.</p>
+<h2 is-upgraded>Cloud Native Full Stack Monitoring</h2>
+<p>In this model the Dynatrace Operator deploys and maintains a OneAgent and a CSI Driver DaemonSet across all workers nodes of your Kubernetes cluster. This ia hybrid model between Host Monitoring &amp; Application Monitoring. OneAgents will be deploy to each node to monitor infrastrucutre metrics and application pods will be individually insturmented. This model <em>WILL</em> create a linkage betwwen the cluster and the pods being instrumented.</p>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="Prerequiste: Deploy the Dynatrace Operator" duration="1">
+        <p>All deployment models require that the Dynatrace Operator is installed.</p>
+<ol type="1">
+<li>Create the dynatrace namespace  <pre><code>kubectl create namespace dynatrace
+</code></pre>
+</li>
+<li>Deploy the Dynatrace operator  <pre><code>kubectl apply -f https://github.com/Dynatrace/dynatrace-operator/releases/latest/download/kubernetes.yaml
+</code></pre>
+</li>
+</ol>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="Deploy Classic Full Stack Mode" duration="5">
+        <p>Once the Dynatrace operator has been deployed, multiple oneagent daemonsets can be deployed.</p>
+<p>Classic Full Stack mode will deploy a full stack oneagent pod to all nodes via a daemonset.</p>
+<ol type="1">
+<li>deploy the classicFullStack.yaml file</li>
+</ol>
+<pre><code language="language-shell" class="language-shell">kubectl apply -f classicFullStack.yaml
+</code></pre>
+<p><code>classicFullStack.yaml</code></p>
+<pre><code language="language-yaml" class="language-yaml">apiVersion: v1
+data:
+  apiToken: &lt;redacted&gt;
+  dataIngestToken: &lt;redacted&gt;
+kind: Secret
+metadata:
+  name: fullstack
+  namespace: dynatrace
+type: Opaque
+---
+apiVersion: dynatrace.com/v1beta1
+kind: DynaKube
+metadata:
+  name: fullstack
+  namespace: dynatrace
+  annotations:
+    feature.dynatrace.com/automatic-kubernetes-api-monitoring: &#34;true&#34;
+spec:
+  # Dynatrace apiUrl including the `/api` path at the end.
+  # For SaaS, set `YOUR_ENVIRONMENT_ID` to your environment ID.
+  # For Managed, change the apiUrl address.
+  # For instructions on how to determine the environment ID and how to configure the apiUrl address, see https://www.dynatrace.com/support/help/reference/dynatrace-concepts/environment-id/.
+  apiUrl: https://&lt;redacted&gt;.live.dynatrace.com/api
+
+  # Optional: name of secret holding `apiToken` and `paasToken`
+  # If unset, name of custom resource is used
+  #
+  # tokens: &#34;&#34;
+
+  # Optional: Disable certificate validation checks for installer download and API communication
+  #
+  skipCertCheck: true
+
+  # Optional: Set custom proxy settings either directly or from a secret with the field &#39;proxy&#39;
+  #
+  # proxy:
+  #   value: https://my-proxy-url.com
+  #   valueFrom: name-of-my-proxy-secret
+
+  # Optional: Adds custom RootCAs from a configmap
+  #
+  # trustedCAs: name-of-my-ca-configmap
+
+  # Optional: Sets Network Zone for OneAgent and ActiveGate pods
+  # Make sure networkZones are enabled on your cluster before (see https://www.dynatrace.com/support/help/setup-and-configuration/network-zones/network-zones-basic-info/)
+  #
+  # networkZone: name-of-my-network-zone
+  
+
+  # Optional: Defines a custom pull secret in case you use a private registry when pulling images from the dynatrace environment
+  # The secret has to be of type &#39;kubernetes.io/dockerconfigjson&#39; (see https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/)
+  #
+  # customPullSecret: &#34;custom-pull-secret&#34;
+
+  # Optional: when enabled, and if Istio is installed on the Kubernetes environment, then the
+  # Operator will create the corresponding VirtualService and ServiceEntry objects to allow access
+  # to the Dynatrace cluster from the agent or the activeGate. Disabled by default.
+  #
+  # enableIstio: false
+
+  oneAgent:
+    # Optional: enable classic fullstack monitoring and change its settings
+    # Cannot be used in conjunction with cloud-native fullstack monitoring, application-only monitoring or host monitoring
+    classicFullStack:
+      # Optional: If specified, indicates the OneAgent version to use
+      # Defaults to latest
+      #
+      # version:
+
+      # Optional: to use a custom OneAgent Docker image. Defaults to docker.io/dynatrace/oneagent in
+      # Kubernetes and registry.connect.redhat.com/dynatrace/oneagent in OpenShift, if deployed via CSV
+      # image: &#34;&#34;
+
+      # Optional: node selector to control on which nodes the OneAgent will be deployed.
+      #
+      # nodeSelector: {}
+
+      # Optional: priority class to assign to the OneAgent Pods. By default no class is set.
+      # See more here: https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/
+      #
+      # priorityClassName: priority-class
+
+      # Optional: tolerations to include with the OneAgent DaemonSet.
+      # See more here: https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
+      tolerations:
+        - effect: NoSchedule
+          key: node-role.kubernetes.io/master
+          operator: Exists
+
+      # Optional: resource settings for OneAgent container. Consumption of the OneAgent heavily depends
+      # on the workload to monitor; please adjust values accordingly.
+      #
+      # oneAgentResources:
+      #   requests:
+      #     cpu: 100m
+      #     memory: 512Mi
+      #   limits:
+      #     cpu: 300m
+      #     memory: 1.5Gi
+
+      # Optional: disables automatic restarts of OneAgent pods in case a new version is available. True
+      # by default.
+      #
+      # autoUpdate: true
+
+      # Optional: DNS Policy for OneAgent pods. Defaults to ClusterFirstWithHostNet.
+      # See more: https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/#pod-s-dns-policy
+      #
+      # dnsPolicy: &#34;ClusterFirstWithHostNet&#34;
+
+      # Optional: labels are customer defined labels for OneAgent Pods to structure workloads as desired.
+      #
+      # labels:
+      #   custom: label
+
+      # Optional: additional environment variables to add to the OneAgent Pods.
+      #
+      # env: []
+      env:
+        - name: ONEAGENT_ENABLE_VOLUME_STORAGE
+          value: &#34;true&#34;
+
+      # Optional: arguments to add to the OneAgent installer.
+      # Available options: https://www.dynatrace.com/support/help/shortlink/linux-custom-installation
+      # Limitations: https://www.dynatrace.com/support/help/shortlink/oneagent-docker#limitations
+      #
+      # args: []
+      
+
+  # Configuration for ActiveGate instances.
+  activeGate:
+    # Enables listed ActiveGate capabilities
+    capabilities:
+      - routing
+      - kubernetes-monitoring
+
+    # Optional: to use a custom ActiveGate Docker image.
+    # image: &#34;&#34;
+
+    # Amount of replicas of ActiveGate pods
+    #
+    # replicas: 1
+
+    # Optional: tolerations to include with the ActiveGate StatefulSet.
+    # See more here: https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
+    #
+    # tolerations:
+    # - effect: NoSchedule
+    #   key: node-role.kubernetes.io/master
+    #   operator: Exists
+
+    # Optional: node selector to control on which nodes the ActiveGate will be deployed.
+    #
+    # nodeSelector: {}
+
+    # Optional: resource settings for ActiveGate container. Consumption of the ActiveGate heavily depends
+    # on the workload to monitor; please adjust values accordingly.
+    #
+    # Suggested starting point for resources below:
+    #
+    resources:
+      requests:
+        cpu: 500m
+        memory: 512Mi
+      limits:
+        cpu: 1000m
+        memory: 1.5Gi
+
+    # Optional: labels are customer defined labels for ActiveGate Pods to structure workloads as desired.
+    #
+    # labels:
+    #   custom: label
+
+    # Optional: additional environment variables to add to the ActiveGate Pods.
+    #
+    # env: []
+
+    # Optional: Set activation group for ActiveGate
+    #
+    # group: &#34;&#34;
+    
+
+    # Optional: Add a custom properties file by providing it as a value or reference it from a secret
+    # If referenced from a secret, make sure the key is called &#39;customProperties&#39;
+    #
+    # customProperties:
+    #   value: |
+    #     [connectivity]
+    #     networkZone=
+    #   valueFrom: myCustomPropertiesConfigMap
+
+</code></pre>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="Deploy Host Monitoring Mode" duration="5">
+        <p>Host Monitoring mode will deploy a infrastructure only (no APM injection) oneagent pod to all nodes via a daemonset.</p>
+<ol type="1">
+<li>deploy the hostMonitoring.yaml file</li>
+</ol>
+<pre><code language="language-shell" class="language-shell">kubectl apply -f hostMonitoring.yaml
+</code></pre>
+<p><code>hostMonitoring.yaml</code></p>
+<pre><code language="language-yaml" class="language-yaml">apiVersion: v1
+data:
+  apiToken: &lt;redacted&gt;
+  dataIngestToken: &lt;redacted&gt;
+kind: Secret
+metadata:
+  name: hostMonitoring
+  namespace: dynatrace
+type: Opaque
+---
+apiVersion: dynatrace.com/v1beta1
+kind: DynaKube
+metadata:
+  name: hostMonitoring
+  namespace: dynatrace
+  annotations:
+    feature.dynatrace.com/automatic-kubernetes-api-monitoring: &#34;true&#34;
+spec:
+  # Dynatrace apiUrl including the `/api` path at the end.
+  # For SaaS, set `YOUR_ENVIRONMENT_ID` to your environment ID.
+  # For Managed, change the apiUrl address.
+  # For instructions on how to determine the environment ID and how to configure the apiUrl address, see https://www.dynatrace.com/support/help/reference/dynatrace-concepts/environment-id/.
+  apiUrl: https://&lt;redacted&gt;.live.dynatrace.com/api
+
+  # Optional: name of secret holding `apiToken` and `paasToken`
+  # If unset, name of custom resource is used
+  #
+  # tokens: &#34;&#34;
+
+  # Optional: Disable certificate validation checks for installer download and API communication
+  #
+  skipCertCheck: true
+
+  # Optional: Set custom proxy settings either directly or from a secret with the field &#39;proxy&#39;
+  #
+  # proxy:
+  #   value: https://my-proxy-url.com
+  #   valueFrom: name-of-my-proxy-secret
+
+  # Optional: Adds custom RootCAs from a configmap
+  #
+  # trustedCAs: name-of-my-ca-configmap
+
+  # Optional: Sets Network Zone for OneAgent and ActiveGate pods
+  # Make sure networkZones are enabled on your cluster before (see https://www.dynatrace.com/support/help/setup-and-configuration/network-zones/network-zones-basic-info/)
+  #
+  # networkZone: name-of-my-network-zone
+  
+
+  # Optional: Defines a custom pull secret in case you use a private registry when pulling images from the dynatrace environment
+  # The secret has to be of type &#39;kubernetes.io/dockerconfigjson&#39; (see https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/)
+  #
+  # customPullSecret: &#34;custom-pull-secret&#34;
+
+  # Optional: when enabled, and if Istio is installed on the Kubernetes environment, then the
+  # Operator will create the corresponding VirtualService and ServiceEntry objects to allow access
+  # to the Dynatrace cluster from the agent or the activeGate. Disabled by default.
+  #
+  # enableIstio: false
+
+  oneAgent:
+    # Optional: enable classic fullstack monitoring and change its settings
+    # Cannot be used in conjunction with cloud-native fullstack monitoring, application-only monitoring or host monitoring
+    hostMonitoring:
+      # Optional: If specified, indicates the OneAgent version to use
+      # Defaults to latest
+      #
+      # version:
+
+      # Optional: to use a custom OneAgent Docker image. Defaults to docker.io/dynatrace/oneagent in
+      # Kubernetes and registry.connect.redhat.com/dynatrace/oneagent in OpenShift, if deployed via CSV
+      # image: &#34;&#34;
+
+      # Optional: node selector to control on which nodes the OneAgent will be deployed.
+      #
+      # nodeSelector: {}
+
+      # Optional: priority class to assign to the OneAgent Pods. By default no class is set.
+      # See more here: https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/
+      #
+      # priorityClassName: priority-class
+
+      # Optional: tolerations to include with the OneAgent DaemonSet.
+      # See more here: https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
+      tolerations:
+        - effect: NoSchedule
+          key: node-role.kubernetes.io/master
+          operator: Exists
+
+      # Optional: resource settings for OneAgent container. Consumption of the OneAgent heavily depends
+      # on the workload to monitor; please adjust values accordingly.
+      #
+      # oneAgentResources:
+      #   requests:
+      #     cpu: 100m
+      #     memory: 512Mi
+      #   limits:
+      #     cpu: 300m
+      #     memory: 1.5Gi
+
+      # Optional: disables automatic restarts of OneAgent pods in case a new version is available. True
+      # by default.
+      #
+      # autoUpdate: true
+
+      # Optional: DNS Policy for OneAgent pods. Defaults to ClusterFirstWithHostNet.
+      # See more: https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/#pod-s-dns-policy
+      #
+      # dnsPolicy: &#34;ClusterFirstWithHostNet&#34;
+
+      # Optional: labels are customer defined labels for OneAgent Pods to structure workloads as desired.
+      #
+      # labels:
+      #   custom: label
+
+      # Optional: additional environment variables to add to the OneAgent Pods.
+      #
+      # env: []
+      env:
+        - name: ONEAGENT_ENABLE_VOLUME_STORAGE
+          value: &#34;true&#34;
+
+      # Optional: arguments to add to the OneAgent installer.
+      # Available options: https://www.dynatrace.com/support/help/shortlink/linux-custom-installation
+      # Limitations: https://www.dynatrace.com/support/help/shortlink/oneagent-docker#limitations
+      #
+      # args: []
+      
+
+  # Configuration for ActiveGate instances.
+  activeGate:
+    # Enables listed ActiveGate capabilities
+    capabilities:
+      - routing
+      - kubernetes-monitoring
+
+    # Optional: to use a custom ActiveGate Docker image.
+    # image: &#34;&#34;
+
+    # Amount of replicas of ActiveGate pods
+    #
+    # replicas: 1
+
+    # Optional: tolerations to include with the ActiveGate StatefulSet.
+    # See more here: https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
+    #
+    # tolerations:
+    # - effect: NoSchedule
+    #   key: node-role.kubernetes.io/master
+    #   operator: Exists
+
+    # Optional: node selector to control on which nodes the ActiveGate will be deployed.
+    #
+    # nodeSelector: {}
+
+    # Optional: resource settings for ActiveGate container. Consumption of the ActiveGate heavily depends
+    # on the workload to monitor; please adjust values accordingly.
+    #
+    # Suggested starting point for resources below:
+    #
+    resources:
+      requests:
+        cpu: 500m
+        memory: 512Mi
+      limits:
+        cpu: 1000m
+        memory: 1.5Gi
+
+    # Optional: labels are customer defined labels for ActiveGate Pods to structure workloads as desired.
+    #
+    # labels:
+    #   custom: label
+
+    # Optional: additional environment variables to add to the ActiveGate Pods.
+    #
+    # env: []
+
+    # Optional: Set activation group for ActiveGate
+    #
+    # group: &#34;&#34;
+    
+
+    # Optional: Add a custom properties file by providing it as a value or reference it from a secret
+    # If referenced from a secret, make sure the key is called &#39;customProperties&#39;
+    #
+    # customProperties:
+    #   value: |
+    #     [connectivity]
+    #     networkZone=
+    #   valueFrom: myCustomPropertiesConfigMap
+</code></pre>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="Deploy Application Monitoring Mode" duration="5">
+        <p>Application Monitoring mode will inject a oneagent to annotated namespaces or pods at runtime. There will be no infrastrucutre monitoring for the kubernetes nodes. Additionally a seperate daemonset, the csi drivers, must be deployed to the cluster. This Daemon set handles the APM injection without oneagent.</p>
+<ol type="1">
+<li>Install the CSI Driver Daemonset</li>
+</ol>
+<pre><code language="language-shell" class="language-shell">kubectl apply -f https://github.com/Dynatrace/dynatrace-operator/releases/latest/download/kubernetes-csi.yaml
+</code></pre>
+<ol type="1">
+<li>Next we need to leverage either new or existing labels at the namespace or pod level</li>
+</ol>
+<p><code>namespace example</code></p>
+<pre><code language="language-shell" class="language-shell">kubectl label namespace $namespace $key=$value
+
+example:
+kubectl label namespace hipstershop apponly=enabled
+</code></pre>
+<p>This also needs to be set in the custom resource file see below stanza matching this config at line 61</p>
+<ol type="1">
+<li>Install the applicationMonitoring.yaml</li>
+</ol>
+<pre><code language="language-shell" class="language-shell">kubectl apply -f applicationMonitoring.yaml
+</code></pre>
+<p>applicationMonitoring.yaml</p>
+<pre><code language="language-yaml" class="language-yaml">apiVersion: v1
+data:
+  apiToken: &lt;redacted&gt;
+  dataIngestToken: &lt;redacted&gt;
+kind: Secret
+metadata:
+  name: applicationMonitoring
+  namespace: dynatrace
+type: Opaque
+---
+apiVersion: dynatrace.com/v1beta1
+kind: DynaKube
+metadata:
+  name: applicationMonitoring
+  namespace: dynatrace
+  annotations:
+    feature.dynatrace.com/automatic-kubernetes-api-monitoring: &#34;true&#34;
+spec:
+  # Dynatrace apiUrl including the `/api` path at the end.
+  # For SaaS, set `YOUR_ENVIRONMENT_ID` to your environment ID.
+  # For Managed, change the apiUrl address.
+  # For instructions on how to determine the environment ID and how to configure the apiUrl address, see https://www.dynatrace.com/support/help/reference/dynatrace-concepts/environment-id/.
+  apiUrl: https://&lt;redacted&gt;.live.dynatrace.com/api
+
+  # Optional: name of secret holding `apiToken` and `paasToken`
+  # If unset, name of custom resource is used
+  #
+  # tokens: &#34;&#34;
+
+  # Optional: Disable certificate validation checks for installer download and API communication
+  #
+  skipCertCheck: true
+
+  # Optional: Set custom proxy settings either directly or from a secret with the field &#39;proxy&#39;
+  #
+  # proxy:
+  #   value: https://my-proxy-url.com
+  #   valueFrom: name-of-my-proxy-secret
+
+  # Optional: Adds custom RootCAs from a configmap
+  #
+  # trustedCAs: name-of-my-ca-configmap
+
+  # Optional: Sets Network Zone for OneAgent and ActiveGate pods
+  # Make sure networkZones are enabled on your cluster before (see https://www.dynatrace.com/support/help/setup-and-configuration/network-zones/network-zones-basic-info/)
+  #
+  # networkZone: name-of-my-network-zone
+  
+
+  # Optional: Defines a custom pull secret in case you use a private registry when pulling images from the dynatrace environment
+  # The secret has to be of type &#39;kubernetes.io/dockerconfigjson&#39; (see https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/)
+  #
+  # customPullSecret: &#34;custom-pull-secret&#34;
+
+  # Optional: when enabled, and if Istio is installed on the Kubernetes environment, then the
+  # Operator will create the corresponding VirtualService and ServiceEntry objects to allow access
+  # to the Dynatrace cluster from the agent or the activeGate. Disabled by default.
+  #
+  # enableIstio: false
+
+  namespaceSelector:
+    matchLabels:
+      apponly: enabled
+
+  oneAgent:
+    # Optional: enable classic fullstack monitoring and change its settings
+    # Cannot be used in conjunction with cloud-native fullstack monitoring, application-only monitoring or host monitoring
+    applicationMonitoring:
+      # Optional: If specified, indicates the OneAgent version to use
+      # Defaults to latest
+      #
+      # version:
+
+      # Optional: to use a custom OneAgent Docker image. Defaults to docker.io/dynatrace/oneagent in
+      # Kubernetes and registry.connect.redhat.com/dynatrace/oneagent in OpenShift, if deployed via CSV
+      # image: &#34;&#34;
+
+      # Optional: node selector to control on which nodes the OneAgent will be deployed.
+      #
+      # nodeSelector: {}
+
+      # Optional: priority class to assign to the OneAgent Pods. By default no class is set.
+      # See more here: https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/
+      #
+      # priorityClassName: priority-class
+
+      # Optional: tolerations to include with the OneAgent DaemonSet.
+      # See more here: https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
+      tolerations:
+        - effect: NoSchedule
+          key: node-role.kubernetes.io/master
+          operator: Exists
+
+      # Optional: resource settings for OneAgent container. Consumption of the OneAgent heavily depends
+      # on the workload to monitor; please adjust values accordingly.
+      #
+      # oneAgentResources:
+      #   requests:
+      #     cpu: 100m
+      #     memory: 512Mi
+      #   limits:
+      #     cpu: 300m
+      #     memory: 1.5Gi
+
+      # Optional: disables automatic restarts of OneAgent pods in case a new version is available. True
+      # by default.
+      #
+      # autoUpdate: true
+
+      # Optional: DNS Policy for OneAgent pods. Defaults to ClusterFirstWithHostNet.
+      # See more: https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/#pod-s-dns-policy
+      #
+      # dnsPolicy: &#34;ClusterFirstWithHostNet&#34;
+
+      # Optional: labels are customer defined labels for OneAgent Pods to structure workloads as desired.
+      #
+      # labels:
+      #   custom: label
+
+      # Optional: additional environment variables to add to the OneAgent Pods.
+      #
+      # env: []
+      env:
+        - name: ONEAGENT_ENABLE_VOLUME_STORAGE
+          value: &#34;true&#34;
+
+      # Optional: arguments to add to the OneAgent installer.
+      # Available options: https://www.dynatrace.com/support/help/shortlink/linux-custom-installation
+      # Limitations: https://www.dynatrace.com/support/help/shortlink/oneagent-docker#limitations
+      #
+      # args: []
+      
+
+  # Configuration for ActiveGate instances.
+  activeGate:
+    # Enables listed ActiveGate capabilities
+    capabilities:
+      - routing
+      - kubernetes-monitoring
+
+    # Optional: to use a custom ActiveGate Docker image.
+    # image: &#34;&#34;
+
+    # Amount of replicas of ActiveGate pods
+    #
+    # replicas: 1
+
+    # Optional: tolerations to include with the ActiveGate StatefulSet.
+    # See more here: https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
+    #
+    # tolerations:
+    # - effect: NoSchedule
+    #   key: node-role.kubernetes.io/master
+    #   operator: Exists
+
+    # Optional: node selector to control on which nodes the ActiveGate will be deployed.
+    #
+    # nodeSelector: {}
+
+    # Optional: resource settings for ActiveGate container. Consumption of the ActiveGate heavily depends
+    # on the workload to monitor; please adjust values accordingly.
+    #
+    # Suggested starting point for resources below:
+    #
+    resources:
+      requests:
+        cpu: 500m
+        memory: 512Mi
+      limits:
+        cpu: 1000m
+        memory: 1.5Gi
+
+    # Optional: labels are customer defined labels for ActiveGate Pods to structure workloads as desired.
+    #
+    # labels:
+    #   custom: label
+
+    # Optional: additional environment variables to add to the ActiveGate Pods.
+    #
+    # env: []
+
+    # Optional: Set activation group for ActiveGate
+    #
+    # group: &#34;&#34;
+    
+
+    # Optional: Add a custom properties file by providing it as a value or reference it from a secret
+    # If referenced from a secret, make sure the key is called &#39;customProperties&#39;
+    #
+    # customProperties:
+    #   value: |
+    #     [connectivity]
+    #     networkZone=
+    #   valueFrom: myCustomPropertiesConfigMap
+</code></pre>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="Deploy Cloud Native FullStack Mode" duration="5">
+        <ol type="1">
+<li>Install the CSI Driver Daemonset</li>
+</ol>
+<pre><code language="language-shell" class="language-shell">kubectl apply -f https://github.com/Dynatrace/dynatrace-operator/releases/latest/download/kubernetes-csi.yaml
+</code></pre>
+<ol type="1">
+<li>Next we need to leverage either new or existing labels at the namespace or pod level</li>
+</ol>
+<p><code>namespace example</code></p>
+<pre><code language="language-shell" class="language-shell">kubectl label namespace $namespace $key=$value
+
+example:
+kubectl label namespace hipstershop cloudnative=enabled
+</code></pre>
+<p>This also needs to be set in the custom resource file see below stanza matching this config at line 61</p>
+<ol type="1">
+<li>Install the cloudNativeFullStack.yaml</li>
+</ol>
+<pre><code language="language-shell" class="language-shell">kubectl apply -f cloudNativeFullStack.yaml
+</code></pre>
+<p><code>cloudNativeFullStack.yaml</code></p>
+<pre><code language="language-yaml" class="language-yaml">apiVersion: v1
+data:
+  apiToken: &lt;redacted&gt;
+  dataIngestToken: &lt;redacted&gt;
+kind: Secret
+metadata:
+  name: cloudNativeFullStack
+  namespace: dynatrace
+type: Opaque
+---
+apiVersion: dynatrace.com/v1beta1
+kind: DynaKube
+metadata:
+  name: cloudNativeFullStack
+  namespace: dynatrace
+  annotations:
+    feature.dynatrace.com/automatic-kubernetes-api-monitoring: &#34;true&#34;
+spec:
+  # Dynatrace apiUrl including the `/api` path at the end.
+  # For SaaS, set `YOUR_ENVIRONMENT_ID` to your environment ID.
+  # For Managed, change the apiUrl address.
+  # For instructions on how to determine the environment ID and how to configure the apiUrl address, see https://www.dynatrace.com/support/help/reference/dynatrace-concepts/environment-id/.
+  apiUrl: https://&lt;redacted&gt;.live.dynatrace.com/api
+
+  # Optional: name of secret holding `apiToken` and `paasToken`
+  # If unset, name of custom resource is used
+  #
+  # tokens: &#34;&#34;
+
+  # Optional: Disable certificate validation checks for installer download and API communication
+  #
+  skipCertCheck: true
+
+  # Optional: Set custom proxy settings either directly or from a secret with the field &#39;proxy&#39;
+  #
+  # proxy:
+  #   value: https://my-proxy-url.com
+  #   valueFrom: name-of-my-proxy-secret
+
+  # Optional: Adds custom RootCAs from a configmap
+  #
+  # trustedCAs: name-of-my-ca-configmap
+
+  # Optional: Sets Network Zone for OneAgent and ActiveGate pods
+  # Make sure networkZones are enabled on your cluster before (see https://www.dynatrace.com/support/help/setup-and-configuration/network-zones/network-zones-basic-info/)
+  #
+  # networkZone: name-of-my-network-zone
+  
+
+  # Optional: Defines a custom pull secret in case you use a private registry when pulling images from the dynatrace environment
+  # The secret has to be of type &#39;kubernetes.io/dockerconfigjson&#39; (see https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/)
+  #
+  # customPullSecret: &#34;custom-pull-secret&#34;
+
+  # Optional: when enabled, and if Istio is installed on the Kubernetes environment, then the
+  # Operator will create the corresponding VirtualService and ServiceEntry objects to allow access
+  # to the Dynatrace cluster from the agent or the activeGate. Disabled by default.
+  #
+  # enableIstio: false
+
+  namespaceSelector:
+    matchLabels:
+      cloudnative: enabled
+
+  oneAgent:
+    # Optional: enable classic fullstack monitoring and change its settings
+    # Cannot be used in conjunction with cloud-native fullstack monitoring, application-only monitoring or host monitoring
+    cloudNativeFullStack:
+      # Optional: If specified, indicates the OneAgent version to use
+      # Defaults to latest
+      #
+      # version:
+
+      # Optional: to use a custom OneAgent Docker image. Defaults to docker.io/dynatrace/oneagent in
+      # Kubernetes and registry.connect.redhat.com/dynatrace/oneagent in OpenShift, if deployed via CSV
+      # image: &#34;&#34;
+
+      # Optional: node selector to control on which nodes the OneAgent will be deployed.
+      #
+      # nodeSelector: {}
+
+      # Optional: priority class to assign to the OneAgent Pods. By default no class is set.
+      # See more here: https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/
+      #
+      # priorityClassName: priority-class
+
+      # Optional: tolerations to include with the OneAgent DaemonSet.
+      # See more here: https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
+      tolerations:
+        - effect: NoSchedule
+          key: node-role.kubernetes.io/master
+          operator: Exists
+
+      # Optional: resource settings for OneAgent container. Consumption of the OneAgent heavily depends
+      # on the workload to monitor; please adjust values accordingly.
+      #
+      # oneAgentResources:
+      #   requests:
+      #     cpu: 100m
+      #     memory: 512Mi
+      #   limits:
+      #     cpu: 300m
+      #     memory: 1.5Gi
+
+      # Optional: disables automatic restarts of OneAgent pods in case a new version is available. True
+      # by default.
+      #
+      # autoUpdate: true
+
+      # Optional: DNS Policy for OneAgent pods. Defaults to ClusterFirstWithHostNet.
+      # See more: https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/#pod-s-dns-policy
+      #
+      # dnsPolicy: &#34;ClusterFirstWithHostNet&#34;
+
+      # Optional: labels are customer defined labels for OneAgent Pods to structure workloads as desired.
+      #
+      # labels:
+      #   custom: label
+
+      # Optional: additional environment variables to add to the OneAgent Pods.
+      #
+      # env: []
+      env:
+        - name: ONEAGENT_ENABLE_VOLUME_STORAGE
+          value: &#34;true&#34;
+
+      # Optional: arguments to add to the OneAgent installer.
+      # Available options: https://www.dynatrace.com/support/help/shortlink/linux-custom-installation
+      # Limitations: https://www.dynatrace.com/support/help/shortlink/oneagent-docker#limitations
+      #
+      # args: []
+      
+
+  # Configuration for ActiveGate instances.
+  activeGate:
+    # Enables listed ActiveGate capabilities
+    capabilities:
+      - routing
+      - kubernetes-monitoring
+
+    # Optional: to use a custom ActiveGate Docker image.
+    # image: &#34;&#34;
+
+    # Amount of replicas of ActiveGate pods
+    #
+    # replicas: 1
+
+    # Optional: tolerations to include with the ActiveGate StatefulSet.
+    # See more here: https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
+    #
+    # tolerations:
+    # - effect: NoSchedule
+    #   key: node-role.kubernetes.io/master
+    #   operator: Exists
+
+    # Optional: node selector to control on which nodes the ActiveGate will be deployed.
+    #
+    # nodeSelector: {}
+
+    # Optional: resource settings for ActiveGate container. Consumption of the ActiveGate heavily depends
+    # on the workload to monitor; please adjust values accordingly.
+    #
+    # Suggested starting point for resources below:
+    #
+    resources:
+      requests:
+        cpu: 500m
+        memory: 512Mi
+      limits:
+        cpu: 1000m
+        memory: 1.5Gi
+
+    # Optional: labels are customer defined labels for ActiveGate Pods to structure workloads as desired.
+    #
+    # labels:
+    #   custom: label
+
+    # Optional: additional environment variables to add to the ActiveGate Pods.
+    #
+    # env: []
+
+    # Optional: Set activation group for ActiveGate
+    #
+    # group: &#34;&#34;
+    
+
+    # Optional: Add a custom properties file by providing it as a value or reference it from a secret
+    # If referenced from a secret, make sure the key is called &#39;customProperties&#39;
+    #
+    # customProperties:
+    #   value: |
+    #     [connectivity]
+    #     networkZone=
+    #   valueFrom: myCustomPropertiesConfigMap
+</code></pre>
+
+
+      </google-codelab-step>
+    
+  </google-codelab>
+
+  <script src="https://storage.googleapis.com/codelab-elements/native-shim.js"></script>
+  <script src="https://storage.googleapis.com/codelab-elements/custom-elements.min.js"></script>
+  <script src="https://storage.googleapis.com/codelab-elements/prettify.js"></script>
+  <script src="https://storage.googleapis.com/codelab-elements/codelab-elements.js"></script>
+  <script src="//support.google.com/inapp/api.js"></script>
+
+</body>
+</html>
